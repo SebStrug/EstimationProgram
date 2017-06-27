@@ -41,12 +41,20 @@ SiO2_handle = open(os.path.join(scriptDir, "Refractive indices/refracIndex_SiO2.
 SiO2data = [[float(x) for x in line.split()] for line in SiO2_handle.readlines()]
 ldaSiO2 = [SiO2data[i][0] for i in range(len(SiO2data))] #for silicon dioxide
 SiO2nreal = [SiO2data[i][1] for i in range(len(SiO2data))]
+patternForData = re.compile("^\s+|\s*,\s*|\s+$") #this is for all the whitespaces and commas in the data (data was scraped using 'Data Thief' on a graph from a paper)
 BN_handle = open(os.path.join(scriptDir, "Refractive indices/refracIndex_hBN.txt"), 'r')
-patternForData = re.compile("^\s+|\s*,\s*|\s+$") #this is for all the whitespaces and commas in the data
 BNdata = [[float(x) for x in patternForData.split(line) if x] for line in BN_handle.readlines()] #slightly different since this isn't tab deliminated
 ldaBN = [BNdata[i][0] for i in range(len(BNdata))] #for hexagonal Boron Nitride
 BNnreal = [BNdata[i][1] for i in range(len(BNdata))]
 BNnimag = [BNdata[i][2] for i in range(len(BNdata))]
+BP_real_handle = open(os.path.join(scriptDir, "Refractive indices/refracIndexReal_BP"), 'r')
+BP_real_data = [[float(x) for x in patternForData.split(line) if x] for line in BP_real_handle.readlines()[1:]] #another 'Data Thief' program scrape from a paper
+ldaBPreal = [BP_real_data[i][0]/1000 for i in range(len(BP_real_data))] #for hexagonal Boron Nitride
+BPnreal = [BP_real_data[i][1] for i in range(len(BP_real_data))]
+BP_imag_handle = open(os.path.join(scriptDir, "Refractive indices/refracIndexImag_BP"), 'r')
+BP_imag_data = [[float(x) for x in patternForData.split(line) if x] for line in BP_imag_handle.readlines()[1:]] #another 'Data Thief' program scrape from a paper
+ldaBPimag = [BP_imag_data[i][0]/1000 for i in range(len(BP_imag_data))] #for hexagonal Boron Nitride
+BPnimag = [BP_imag_data[i][1] for i in range(len(BP_imag_data))]
 Sb_handle = open(os.path.join(scriptDir, "Refractive indices/refracIndex_Sb.txt"), 'r')
 Sbdata = [[float(x) for x in patternForData.split(line) if x] for line in Sb_handle.readlines()]
 ldaSb = [Sbdata[i][0] for i in range(len(Sbdata))] #for Antimony
@@ -77,6 +85,8 @@ Siimagn_2 = interpolate.interp1d(ldaSi_2, Sinimag_2) #imaginary refractive index
 SiO2realn = interpolate.interp1d(ldaSiO2, SiO2nreal)
 BNrealn = interpolate.interp1d(ldaBN, BNnreal)
 BNimagn = interpolate.interp1d(ldaBN, BNnimag)
+BPrealn = interpolate.interp1d(ldaBPreal, BPnreal)
+BPimagn = interpolate.interp1d(ldaBPimag, BPnimag)
 Sbrealn = interpolate.interp1d(ldaSb, Sbnreal)
 Sbimagn = interpolate.interp1d(ldaSb, Sbnimag)  
 WSe2realn = interpolate.interp1d(ldaWSe2, WSe2nreal)
@@ -136,6 +146,7 @@ nvalsMica = np.zeros(len(lda),dtype=complex)
 nvalsMica_Muscovite = np.zeros(len(lda),dtype=complex)
 nvalsMica_backtrack = np.zeros(len(lda),dtype=complex)
 nvalsPDMS = np.zeros(len(lda),dtype=complex)
+nvalsBP = np.zeros(len(lda),dtype=complex)
 
 nvalsSi_test = np.zeros(len(lda),dtype=complex)
 nvalsMica_test = np.zeros(len(lda),dtype=complex)
@@ -162,11 +173,14 @@ for i in range(0,len(lda)):
     nvalsMica = nvalsMica_backtrack    
     nvalsPDMS[i] = 1.415 #from the paper "A new fabrication method for all-PDMS waveguides by Cai et al. (2013)
     #nvalsMica_test[i] = 1.82 #for 673nm wavelength of light
+    if lda[i]<=min(ldaBPreal) or lda[i]<=min(ldaBPimag):
+        nvalsBP[i] = BPrealn(ldaBPreal[0]) + (BPimagn(ldaBPimag[0])*(-1j))        
+    else: nvalsBP[i] = BPrealn(lda[i]) + (BPimagn(lda[i])*(-1j))
 
 nvals = np.zeros(len(lda),dtype=complex)
 print("\n\nWhich material would you like to examine as your 2D material on top of a silicon substrate?\n\
 If you want to enter your own refractive index, please type 'other': ")
-materialType = raw_input("Fluorophlogopite, (h) Boron Nitride, Graphene, Antimony, Sodium Chloride, WSe2, MoS2, NbSe2, or other? \n")
+materialType = raw_input("Fluorophlogopite, (h) Boron Nitride, Graphene, Antimony, Sodium Chloride, WSe2, MoS2, NbSe2, Black Phosphorus, or other? \n")
 materialType = materialType.lower()
 if materialType.lower() in ['mica', 'fluorophlogopite','m']:
     materialType = 'mica'
@@ -214,6 +228,11 @@ elif materialType.lower() in ['nbse2','nbse','nbs','nb','nb2','niobium diselenid
     materialType = 'nbse2' 
     formalName = 'NbSe2'
     monoLayer = 0.686/1000
+elif materialType.lower() in ['bp','black phosphorus','black','phosphorus','blackphosphorus','bphos','bphosphorus']:
+    nvals = nvalsBP
+    materialType = 'bp'
+    formalName = 'BP'
+    monoLayer = 0.5/1000 #estimated, real value unknown
 else:
     print('That is not a valid input, try again')    
     quit()    
@@ -500,18 +519,33 @@ if graphType == 6:
     CForTM5Err2 = np.zeros(NoThick) #SiO2 thickness with error minus wavelength error
     minArray = []
     maxArray = []
-    for i in range(0,NoThick):
-        CForT[i] = Contrast(n0,nValue,SiO2realn(wlgth),(Sirealn(wlgth)+(Siimagn(wlgth)*(-1j))),thickness[i],SiO2setThick,wlgth)
-        CForTWErr1[i] = Contrast(n0,nValue,SiO2realn(wlgth+wlgthErr),(Sirealn(wlgth+wlgthErr)+(Siimagn(wlgth+wlgthErr)*(-1j))),thickness[i],SiO2setThick,wlgth+wlgthErr)
-        CForTWErr2[i] = Contrast(n0,nValue,SiO2realn(wlgth-wlgthErr),(Sirealn(wlgth-wlgthErr)+(Siimagn(wlgth-wlgthErr)*(-1j))),thickness[i],SiO2setThick,wlgth-wlgthErr)
-        CForTP5[i] = Contrast(n0,nValue,SiO2realn(wlgth),(Sirealn(wlgth)+(Siimagn(wlgth)*(-1j))),thickness[i],SiO2setThick*1.05,wlgth)
-        CForTP5Err1[i] = Contrast(n0,nValue,SiO2realn(wlgth+wlgthErr),(Sirealn(wlgth+wlgthErr)+(Siimagn(wlgth+wlgthErr)*(-1j))),thickness[i],SiO2setThick*1.05,wlgth+wlgthErr)
-        CForTP5Err2[i] = Contrast(n0,nValue,SiO2realn(wlgth-wlgthErr),(Sirealn(wlgth-wlgthErr)+(Siimagn(wlgth-wlgthErr)*(-1j))),thickness[i],SiO2setThick*1.05,wlgth-wlgthErr)
-        CForTM5[i] = Contrast(n0,nValue,SiO2realn(wlgth),(Sirealn(wlgth)+(Siimagn(wlgth)*(-1j))),thickness[i],SiO2setThick*0.95,wlgth)
-        CForTM5Err1[i] = Contrast(n0,nValue,SiO2realn(wlgth+wlgthErr),(Sirealn(wlgth+wlgthErr)+(Siimagn(wlgth+wlgthErr)*(-1j))),thickness[i],SiO2setThick*0.95,wlgth+wlgthErr)
-        CForTM5Err2[i] = Contrast(n0,nValue,SiO2realn(wlgth-wlgthErr),(Sirealn(wlgth-wlgthErr)+(Siimagn(wlgth-wlgthErr)*(-1j))),thickness[i],SiO2setThick*0.95,wlgth-wlgthErr)
-        minArray.append(np.min([ CForT[i],CForTP5[i],CForTM5[i],CForTWErr1[i],CForTWErr2[i],CForTP5Err1[i],CForTP5Err2[i],CForTM5Err1[i],CForTM5Err2[i] ]))
-        maxArray.append(np.max([ CForT[i],CForTP5[i],CForTM5[i],CForTWErr1[i],CForTWErr1[i],CForTWErr2[i],CForTP5Err1[i],CForTP5Err2[i],CForTM5Err1[i],CForTM5Err2[i] ]))
+    if SiOrPDMS == 'pdms':
+        for i in range(0,NoThick):
+            PDMSnValue = nvalsPDMS[find_nearest(lda,wlgth)] #PDMS refractive index for the wavelength specified
+            CForT[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick,wlgth)
+            CForTWErr1[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick,wlgth+wlgthErr) #PDMS refractive index doesn't change with wavelength
+            CForTWErr2[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick,wlgth-wlgthErr)
+            CForTP5[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick*1.05,wlgth)
+            CForTP5Err1[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick*1.05,wlgth+wlgthErr)
+            CForTP5Err2[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick*1.05,wlgth-wlgthErr)
+            CForTM5[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick*0.95,wlgth)
+            CForTM5Err1[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick*0.95,wlgth+wlgthErr)
+            CForTM5Err2[i] = Contrast(n0,nValue,PDMSnValue,PDMSnValue,thickness[i],SiO2setThick*0.95,wlgth-wlgthErr)
+            minArray.append(np.min([ CForT[i],CForTP5[i],CForTM5[i],CForTWErr1[i],CForTWErr2[i],CForTP5Err1[i],CForTP5Err2[i],CForTM5Err1[i],CForTM5Err2[i] ]))
+            maxArray.append(np.max([ CForT[i],CForTP5[i],CForTM5[i],CForTWErr1[i],CForTWErr1[i],CForTWErr2[i],CForTP5Err1[i],CForTP5Err2[i],CForTM5Err1[i],CForTM5Err2[i] ]))
+    else:        
+        for i in range(0,NoThick):
+            CForT[i] = Contrast(n0,nValue,SiO2realn(wlgth),(Sirealn(wlgth)+(Siimagn(wlgth)*(-1j))),thickness[i],SiO2setThick,wlgth)
+            CForTWErr1[i] = Contrast(n0,nValue,SiO2realn(wlgth+wlgthErr),(Sirealn(wlgth+wlgthErr)+(Siimagn(wlgth+wlgthErr)*(-1j))),thickness[i],SiO2setThick,wlgth+wlgthErr)
+            CForTWErr2[i] = Contrast(n0,nValue,SiO2realn(wlgth-wlgthErr),(Sirealn(wlgth-wlgthErr)+(Siimagn(wlgth-wlgthErr)*(-1j))),thickness[i],SiO2setThick,wlgth-wlgthErr)
+            CForTP5[i] = Contrast(n0,nValue,SiO2realn(wlgth),(Sirealn(wlgth)+(Siimagn(wlgth)*(-1j))),thickness[i],SiO2setThick*1.05,wlgth)
+            CForTP5Err1[i] = Contrast(n0,nValue,SiO2realn(wlgth+wlgthErr),(Sirealn(wlgth+wlgthErr)+(Siimagn(wlgth+wlgthErr)*(-1j))),thickness[i],SiO2setThick*1.05,wlgth+wlgthErr)
+            CForTP5Err2[i] = Contrast(n0,nValue,SiO2realn(wlgth-wlgthErr),(Sirealn(wlgth-wlgthErr)+(Siimagn(wlgth-wlgthErr)*(-1j))),thickness[i],SiO2setThick*1.05,wlgth-wlgthErr)
+            CForTM5[i] = Contrast(n0,nValue,SiO2realn(wlgth),(Sirealn(wlgth)+(Siimagn(wlgth)*(-1j))),thickness[i],SiO2setThick*0.95,wlgth)
+            CForTM5Err1[i] = Contrast(n0,nValue,SiO2realn(wlgth+wlgthErr),(Sirealn(wlgth+wlgthErr)+(Siimagn(wlgth+wlgthErr)*(-1j))),thickness[i],SiO2setThick*0.95,wlgth+wlgthErr)
+            CForTM5Err2[i] = Contrast(n0,nValue,SiO2realn(wlgth-wlgthErr),(Sirealn(wlgth-wlgthErr)+(Siimagn(wlgth-wlgthErr)*(-1j))),thickness[i],SiO2setThick*0.95,wlgth-wlgthErr)
+            minArray.append(np.min([ CForT[i],CForTP5[i],CForTM5[i],CForTWErr1[i],CForTWErr2[i],CForTP5Err1[i],CForTP5Err2[i],CForTM5Err1[i],CForTM5Err2[i] ]))
+            maxArray.append(np.max([ CForT[i],CForTP5[i],CForTM5[i],CForTWErr1[i],CForTWErr1[i],CForTWErr2[i],CForTP5Err1[i],CForTP5Err2[i],CForTM5Err1[i],CForTM5Err2[i] ]))
     #This graph has repeated values on each side, which would mess with the contrast calculations
     #we will assume the graphene flake is on the thinner side
     """Max val index must be positive or negative!!!"""
