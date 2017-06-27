@@ -24,15 +24,19 @@ In the program, if the user specifies 'PDMS' then the refractive index values of
 Hence, no graphs are available of any variable against PDMS thickness - nothing would change with PDMS thickness as long as the PDMS is not of the order of ~100nm, which to my knowledge, no PDMS in the lab is.
 
 2) What if I want to use a different substrate from Silicon or PDMS?
+
 Write in the refractive index values as you would with another material. Then either tweak the 'Silicon or PDMS?' question for each option or just change the refractive index of PDMS ('nvalsPDMS') to the refractive index of your material. This is assuming you're using something like quartz or glass which will be on the order of >0.1mm, i.e. much thicker than the SiO2 layer on Si in the silicon substrate.
 
 3) How do I add new materials?
+
 This will be detailed shortly. While it is fairly trivial, unfortunately it is laborious.
 
 4) X or Y is not working...
+
 Firstly, try messing around with the program. Is it breaking down when it's asking you to enter a thickness? If so, have you tried to enter something such as '300' instead of '300nm'? Etc.
 If it is not working and you are truly stuck, submit a pull request or comment to this and I may see it and get back to you.
 I have tested the program thoroughly in its current form and everything should be working.
 
 5) How can I get the contrast for heterostructures?
+
 Currently you cannot, until I add a piece of the program that does the intensity and contrast calculation in the form of matrices. Hopefully I will get round to this soon.
