@@ -32,3 +32,6 @@ This will be detailed shortly. While it is fairly trivial, unfortunately it is l
 Firstly, try messing around with the program. Is it breaking down when it's asking you to enter a thickness? If so, have you tried to enter something such as '300' instead of '300nm'? Etc.
 If it is not working and you are truly stuck, submit a pull request or comment to this and I may see it and get back to you.
 I have tested the program thoroughly in its current form and everything should be working.
+
+5) How can I get the contrast for heterostructures?
+Currently you cannot, until I add a piece of the program that does the intensity and contrast calculation in the form of matrices. Hopefully I will get round to this soon.
