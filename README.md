@@ -18,6 +18,7 @@ After you have done this once, you can just click 'Run' or press F5
 
 Quick questions:
 1) Why can't I choose a PDMS thickness?
+
 The PDMS will be so thick (>0.1mm) that it will be out of the depth of field of the microscope. Light reflected from the back of the PDMS will not reach the microscope aperture, so the PDMS can be taken as semi-infinite.
 In the program, if the user specifies 'PDMS' then the refractive index values of Si and SiO2 are just taken to be that of PDMS, with an arbitrary value of 300nm assigned to the SiO2 layer because it is irrelevant.
 Hence, no graphs are available of any variable against PDMS thickness - nothing would change with PDMS thickness as long as the PDMS is not of the order of ~100nm, which to my knowledge, no PDMS in the lab is.
